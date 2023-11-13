@@ -1,28 +1,17 @@
 -- Function to move the object
-local function moveObject(movingObject)
-	print("Type of object: " .. typeof(movingObject) .. "	ClassName: " ..  movingObject.className)
-	--print(movingObject.Anchored)
-	--movingObject.Anchored = true
+local function updateMotion(movingObject, motionVector)
 	if movingObject:IsA("Model") then
 		print("Object is a model.")
-		movingObject:TranslateBy(Vector3.new(10, 0, 0)) -- Move the Model 10 units upwards
-	else
-		print("Object is a mesh part.")
-		local destination = Vector3.new(0, 10, 0) -- Destination position (modify as needed)
-		local speed = 10 -- Movement speed (modify as needed)
-
-		local direction = (destination - movingObject.Position).unit
-		local distance = (destination - movingObject.Position).Magnitude
-
-		local timeToMove = distance / speed
-		local startTime = tick()
-
-		while tick() - startTime < timeToMove do
-			local newPosition = movingObject.Position + direction * speed * wait()
-			movingObject.Position = newPosition
+		
+		local cap = 50  -- change this to cause more motion
+		local i = 0
+		while i < cap do
+			movingObject:TranslateBy(motionVector) -- Move the Model 10 units upwards
+			wait(0.001)
+			i += 1
 		end
-
-		movingObject.Position = destination
+	else
+		print("ERROR: Obj is not a model so location cannot be translated")
 	end
 end
 
@@ -51,7 +40,7 @@ local function getPlayerLocation()
 	return game.Players.JuicyBearHamm.Character.HumanoidRootPart.Position
 end
 
-local function spawnObject(assetId)
+local function spawnObject(assetId, verb)
 	local success, modelOrPart = pcall(function()
 		return game:GetService("InsertService"):LoadAsset(assetId)
 	end)
@@ -62,7 +51,7 @@ local function spawnObject(assetId)
 			local playerLocation = getPlayerLocation()
 			playerLocation = Vector3.new(playerLocation.X + 3, playerLocation.Y, playerLocation.Z)
 			modelOrPart.Parent = game.Workspace
-			local part = modelOrPart:FindFirstChild(modelName)
+			-- local part = modelOrPart:FindFirstChild(modelName)
 			-- print("Object with name " .. modelName .. " spawned successfully!")
 			-- print("Info about and Position of the part is: ")
 			-- print(part)
@@ -79,8 +68,15 @@ local function spawnObject(assetId)
 		
 			-- print("Location reassigned successfully")
 			modelOrPart:MoveTo(playerLocation)
-			wait(5)
-			moveObject(part)
+			wait(1)
+			if verb == "runs" then
+				updateMotion(modelOrPart, Vector3.new(-0.5, 0, 0))
+			elseif verb == 'jumps' then
+				updateMotion(modelOrPart, Vector3.new(0, 0.5, 0))
+				wait(0.1)
+				updateMotion(modelOrPart, Vector3.new(0, 0.5, 0))
+			end
+
 		else
 			modelOrPart:Destroy()
 			print("Invalid object type.")
@@ -94,9 +90,21 @@ end
 local function onPlayerChatted(player, message)
 	-- Check if the key exists in the dictionary
 	print("Player just said " .. message)
-	if myDictionary[message] ~= nil then
-		print("Key exists! Will generate: " .. myDictionary[message])
-		spawnObject(myDictionary[message])
+	local words = {}
+	
+	-- Iterate over the words in the input string
+	for word in message:gmatch("%S+") do
+		table.insert(words, word)
+	end
+	local noun = words[1]
+	local verb = ""
+	if #words >= 2 then
+		verb = words[2]
+	-- print()
+	end
+	if myDictionary[noun] ~= nil then
+		print("Key exists! Will generate noun : " .. myDictionary[noun] .. " with verb " .. verb)
+		spawnObject(myDictionary[noun], verb)
 	else
 		print("Key does not exist.")
 	end
